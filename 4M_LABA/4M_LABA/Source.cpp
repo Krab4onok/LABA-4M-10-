@@ -2,6 +2,7 @@
 #include<cmath>
 #include<locale.h>
 #include<fstream>
+#include<algorithm>
 #define M_PI       3.14159265358979323846
 using namespace std;
 
@@ -46,20 +47,35 @@ double error_rate(double v, double v2)
 
 void main()
 {
+	setlocale(LC_ALL, "Russian");
+	cout << "Нестационарное уравнение теплопроводности: " << endl;
+	cout << "U't = 4U" << '"' << "+e^(-t)*sin(7*pi*x)+1" << " , X от 0 до 1, Т от 0 до 5" << endl;
+	cout << "U(x,0) = 1 - x^2 - начальное условие(температура стержня в начальный момент времени)" << endl;
+	cout << "U(0,t) = cos(t) - левое граничное условие 1-го рода(температура на левом торце стержня)" << endl;
+	cout << "U(n,t) = sin(4*t) - правое граничное условие 1-го рода(температура на правом торце стержня)" << endl;
+	cout << "Запишем неявную разностную схему: " << endl;
+	cout << "(V(Xi,Tj)-V(Xi,Tj-1))/tou - 4 {V(Xi-1,Tj)-2*V(Xi,Tj)+V(Xi+1,Tj)}/h^2 = e^(-t)*sin(7*pi*Xi) +1" << endl;
+	cout << "V(Xi,0) = 1 - (Xi)^2" << endl;
+	cout << "V(0,Tj) = cos(Tj) " << endl;
+	cout << "V(n,Tj) = sin(4*Tj) " << endl;
+	cout << endl;
+	cout << "V - численное решение, полученное с шагом h" << endl;
+	cout << "V2 - численное решение, полученное с шагом h/2" << endl;
+	cout << "max|v-v2| = E2" << endl;
 	double X = 1.0;// ДИАПОЗОН ПО Х
 	double T = 5.0;// ДИАПОЗОН ПО Т
 	double gamma = 4.0;//gamma^2
 	int n, m;// РАЗМЕРНОСТЬ РАЗБИЕНИЯ
-	n = 20;//РАЗБИЕНИЕ ПО Х
-	m = 20;//РАЗБИЕНИЕ ПО У
+	cout << "введите размерность сетки n= ";
+	cin >> n;
+	cout << "m= ";
+	cin >> m;
+	//n = 10;//РАЗБИЕНИЕ ПО Х
+	//m = 10;//РАЗБИЕНИЕ ПО У
 	double tou, h;
 	tou = T / m;
 	h = X / n;
-	double eps = tou;
-	if (eps <  (h * h))
-	{
-		eps = (h * h);
-	}
+	double eps = tou+(h*h);
 	double* fi = new double[n+1];//ПРАВАЯ ЧАСТЬ СЛАУ
 	double** V = new double* [n+1];//ЧИСЛЕННОЕ РЕШЕНИЕ ЗАДАЧИ ПОЛУЧЕННОЕ ПРОГОНКОЙ
 	for (int i = 0; i < n+1; i++)
@@ -78,7 +94,7 @@ void main()
 		fi[n] = sin(4 * j * tou);
 		for (int i = 1; i < n; i++)
 		{
-			fi[i] = (exp(j * tou) * sin(7 * M_PI * i * h) + 1)*tou + V[i][j-1];
+			fi[i] = (exp(-1*j * tou) * sin(7 * M_PI * i * h) + 1)*tou + V[i][j-1];
 		}
 		solution(buf, 4, n, m, T, X, fi);
 		for (int k = 0; k < n + 1; k++)
@@ -121,8 +137,16 @@ void main()
 		}
 		
 	}
+	double MAX_E2 = -1000;
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < m; j++)
+		{
+			MAX_E2 = max(MAX_E2, abs(error_rate(V[i][j], V2[2 * i][2 * j])));
+		}
+	}
 	ofstream fout;
-	fout.open("file.txt");
+	fout.open("new.txt");
 	fout << "x, t, v, " <<n<<" , "<<m<< endl;
 	for (int i = 0; i < n+1; i++)
 	{
@@ -137,71 +161,72 @@ void main()
 	/// <summary>
 	/// ВЫВОД ТАБЛИЦЫ
 	/// </summary>
-	setlocale(LC_ALL, "Russian");
-	for (int i = -1; i < (n + 1); i++)
-	{
-		if (i == -1)
-		{
-			cout << "№ Узла (i,j)"<< '|'; 
-			cout.width(10);
-			cout.setf(ios::left);
-			cout << "Xi " << '|';
-			cout.width(10);
-			cout.setf(ios::left);
-			cout << "Tj " << '|';
-			cout.width(15);
-			cout.setf(ios::left);
-			cout << " V(Xi,Tj) " << '|';
-			cout.width(15);
-			cout.setf(ios::left);
-			cout << "V2(Xi,Tj)" << '|';
-			cout.width(15);
-			cout.setf(ios::left);
-			cout << "E2(V-V2)" << '|';
-			cout.width(15);
-			cout.setf(ios::left);
-			cout << "Точность соблюдена?" << '|';
-			cout.width(15);
-			cout.setf(ios::left);
-			cout<<"eps"<<'|'<< endl;
-		}
-		else
-		{
-			for (int j = 0; j < (m + 1); j++)
+	int flag = 0;
+		cout << "Точность численного решения(E2) = " << MAX_E2<<endl;
+		cout << "Размерность сетки: " << "n= " << n << " m=" << m << endl;
+		cout << "eps = tou+h^2= "<<eps<< endl;
+		
+		if (flag == 1)
+	 { 
+		 for (int i = -1; i < n+1; i++)
+		 {
+			if (i == -1)
 			{
-				cout << "(" << i << "," << j << ")       " << '|';
+				cout << "№ Узла (i,j)" << '|';
 				cout.width(10);
 				cout.setf(ios::left);
-				cout << i * h << '|';
+				cout << "Xi " << '|';
 				cout.width(10);
 				cout.setf(ios::left);
-				cout << j *tou << '|';
+				cout << "Tj " << '|';
 				cout.width(15);
 				cout.setf(ios::left);
-				cout << V[i][j]<</*scientific << */'|';
+				cout << " V(Xi,Tj) " << '|';
 				cout.width(15);
 				cout.setf(ios::left);
-				cout<<V2[2*i][2*j] << /*scientific << */'|';
+				cout << "V2(Xi,Tj)" << '|';
 				cout.width(15);
 				cout.setf(ios::left);
-				cout << abs(error_rate(V[i][j], V2[2 * i][2*j]))<</*scientific << */'|';
-				if (abs(error_rate(V[i][j], V2[2 * i][2*j])) <= eps)
-				{
-					cout.width(18);
-					cout.setf(ios::left);
-					cout << "да" << '|';
-				}
-				else
-				{
-					cout.width(18);
-					cout.setf(ios::left);
-					cout << "нет" << '|';
-				}
-				cout.width(15);
-				cout.setf(ios::left);
-				cout << eps << '|';
+				cout << "E2(V-V2)" << '|';
 				cout << endl;
 			}
-		}
-	}
+			else
+			{
+				for (int j = 0; j < (m + 1); j++)
+				{
+					cout << "(" << i << "," << j << ")       " << '|';
+					cout.width(10);
+					cout.setf(ios::left);
+					cout << i * h << '|';
+					cout.width(10);
+					cout.setf(ios::left);
+					cout << j * tou << '|';
+					cout.width(15);
+					cout.setf(ios::left);
+					cout << V[i][j] <</*scientific << */'|';
+					cout.width(15);
+					cout.setf(ios::left);
+					cout << V2[2 * i][2 * j] << /*scientific << */'|';
+					cout.width(15);
+					cout.setf(ios::left);
+					cout << abs(error_rate(V[i][j], V2[2 * i][2 * j])) <</*scientific << */'|';
+					cout << endl;
+				}
+			}
+	     }
+		 cout << endl;
+		 for (int j = 0; j < m + 1; j++)
+		 {
+			 cout.width(10);
+			 cout.setf(ios::left);
+			 cout << "Слой №" << j << '|';
+			 for (int i = 0; i < n + 1; i++)
+			 {
+				 cout.width(10);
+				 cout.setf(ios::left);
+				 cout << V[i][j] << '|';
+			 }
+			 cout << endl;
+		 }
+	 } 
 }
